@@ -6,6 +6,7 @@
 
 import * as React from "react"
 import { useSearchParams } from "next/navigation"
+import { motion } from "framer-motion"
 import { CreateRotationForm } from "@/components/rotation/create-rotation-form"
 import { DepositDetails } from "@/components/rotation/deposit-details"
 import { JobSearch } from "@/components/rotation/job-search"
@@ -50,18 +51,18 @@ export default function HomePage() {
   }
 
   const handleTrackStatus = (jobId: string) => {
-    // Scroll to status section and load job
     const statusSection = document.getElementById("status-section")
     statusSection?.scrollIntoView({ behavior: "smooth" })
     handleJobSearch(jobId)
   }
 
-  // Poll for updates when job is not in terminal state
-  const shouldPoll = searchedJob && searchedJob.status !== "completed" && searchedJob.status !== "failed"
+  // Poll while job is not terminal
+  const shouldPoll =
+    searchedJob && searchedJob.status !== "completed" && searchedJob.status !== "failed"
 
   const { refresh: refreshJob, isPolling } = usePolling({
     enabled: !!shouldPoll,
-    interval: 10000, // 10 seconds
+    interval: 10000,
     fn: async () => {
       if (searchedJobId) {
         const response = await getJob(searchedJobId)
@@ -75,18 +76,26 @@ export default function HomePage() {
   return (
     <div className="container mx-auto px-4 py-12">
       {/* Hero Section */}
-      <section className="mb-16 text-center">
+      <motion.section
+        className="mb-16 text-center"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
         <div className="mx-auto max-w-3xl space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-muted)]/50 px-4 py-2 text-sm">
             <Shield className="h-4 w-4 text-[var(--color-zcash-gold)]" />
-            <span className="text-[var(--color-foreground)]">Privacy-first cross-chain rotations</span>
+            <span className="text-[var(--color-foreground)]">
+              Privacy-first cross-chain rotations
+            </span>
           </div>
           <h1 className="text-balance text-4xl font-bold tracking-tight text-[var(--color-snow)] sm:text-5xl md:text-6xl">
-            Private, scheduled rotations via <span className="text-[var(--color-zcash-gold)]">Zcash</span>
+            Private, scheduled rotations via{" "}
+            <span className="text-[var(--color-zcash-gold)]">Zcash</span>
           </h1>
           <p className="text-pretty text-lg text-[var(--color-muted-foreground)] sm:text-xl">
-            Move assets between blockchains through Zcash's shielded pool with scheduled release times. Maximum privacy,
-            minimal friction.
+            Move assets between blockchains through Zcash's shielded pool with scheduled release
+            times. Maximum privacy, minimal friction.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Button
@@ -111,9 +120,9 @@ export default function HomePage() {
             </Button>
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      {/* Main Content - Two Column Layout */}
+      {/* Main Content */}
       <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-2">
         {/* Left Column - Create Rotation */}
         <section id="create-section" className="space-y-6">
@@ -123,7 +132,11 @@ export default function HomePage() {
             <CreateRotationForm onSuccess={setCreatedJob} />
           )}
           {createdJob && (
-            <Button variant="outline" onClick={() => setCreatedJob(null)} className="w-full">
+            <Button
+              variant="outline"
+              onClick={() => setCreatedJob(null)}
+              className="w-full"
+            >
               Create Another Rotation
             </Button>
           )}
@@ -137,12 +150,18 @@ export default function HomePage() {
               <CardDescription>Track your rotation progress by Job ID</CardDescription>
             </CardHeader>
             <CardContent>
-              <JobSearch onSearch={handleJobSearch} initialJobId={searchedJobId || ""} />
+              <JobSearch
+                onSearch={handleJobSearch}
+                initialJobId={searchedJobId || ""}
+              />
             </CardContent>
           </Card>
 
           {searchError && (
-            <div className="rounded-md border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400" role="alert">
+            <div
+              className="rounded-md border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400"
+              role="alert"
+            >
               {searchError}
             </div>
           )}
@@ -150,7 +169,9 @@ export default function HomePage() {
           {searchedJob && (
             <>
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-[var(--color-foreground)]">Job Details</h3>
+                <h3 className="text-lg font-semibold text-[var(--color-foreground)]">
+                  Job Details
+                </h3>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -158,7 +179,9 @@ export default function HomePage() {
                   disabled={isPolling}
                   aria-label="Refresh job status"
                 >
-                  <RefreshCw className={`h-4 w-4 ${isPolling ? "animate-spin" : ""}`} />
+                  <RefreshCw
+                    className={`h-4 w-4 ${isPolling ? "animate-spin" : ""}`}
+                  />
                 </Button>
               </div>
 
@@ -174,8 +197,11 @@ export default function HomePage() {
               </Card>
 
               {isPolling && (
-                <p className="text-center text-xs text-[var(--color-muted-foreground)]" aria-live="polite">
-                  Auto-refreshing every 10 seconds...
+                <p
+                  className="text-center text-xs text-[var(--color-muted-foreground)]"
+                  aria-live="polite"
+                >
+                  Auto-refreshing every 10 seconds…
                 </p>
               )}
             </>

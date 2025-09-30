@@ -1,10 +1,11 @@
 /**
- * Form for creating a new rotation request
+ * Form for creating a new rotation request with stepper UX
  */
 
 "use client"
 
 import * as React from "react"
+import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,25 +13,32 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useJobsApi } from "@/hooks/use-jobs-api"
-import { validateRotationForm } from "@/lib/validators"
 import { toIsoLocal } from "@/lib/time"
 import type { Job } from "@/types/job"
-import { Loader2 } from "lucide-react"
+import { Loader2, Info } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { ASSETS, CHAINS } from "@/config/chains"
 
 interface CreateRotationFormProps {
   onSuccess: (job: Job) => void
 }
 
-const chains = ["ETH", "NEAR", "ZCASH"]
-const assets: Record<string, string[]> = {
-  ETH: ["USDC", "ETH"],
-  NEAR: ["NEAR", "USDC"],
-  ZCASH: ["ZEC"],
-}
+const schema = z.object({
+  amount: z.number().positive("Amount must be greater than 0"),
+  destinationAddress: z.string().min(3, "Enter a valid address"),
+  releaseAt: z.string().refine(
+    (date) => new Date(date).getTime() > Date.now(),
+    "Release time must be in the future"
+  ),
+})
 
 export function CreateRotationForm({ onSuccess }: CreateRotationFormProps) {
   const { createJob } = useJobsApi()
+  const { toast } = useToast()
+
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [step, setStep] = React.useState(1)
   const [error, setError] = React.useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({})
 
@@ -45,55 +53,55 @@ export function CreateRotationForm({ onSuccess }: CreateRotationFormProps) {
     notes: "",
   })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setFieldErrors({})
-
-    const amount = Number.parseFloat(formData.amount)
-    const errors = validateRotationForm({
-      amount,
-      releaseAt: formData.releaseAt,
-      destinationAddress: formData.destinationAddress,
-      destinationChain: formData.destinationChain,
-    })
-
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors)
-      return
-    }
-
-    setIsSubmitting(true)
-
-    try {
-      const response = await createJob({
-        sourceChain: formData.sourceChain,
-        sourceAsset: formData.sourceAsset,
-        amount,
-        destinationChain: formData.destinationChain,
-        destinationAsset: formData.destinationAsset,
-        destinationAddress: formData.destinationAddress,
-        releaseAt: new Date(formData.releaseAt).toISOString(),
-        notes: formData.notes || undefined,
-      })
-
-      onSuccess(response.job)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create rotation")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   const updateField = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-    // Clear field error when user starts typing
     if (fieldErrors[field]) {
       setFieldErrors((prev) => {
         const next = { ...prev }
         delete next[field]
         return next
       })
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setFieldErrors({})
+
+    const parsed = schema.safeParse({
+      amount: Number(formData.amount),
+      destinationAddress: formData.destinationAddress,
+      releaseAt: formData.releaseAt,
+    })
+
+    if (!parsed.success) {
+      const errs: Record<string, string> = {}
+      parsed.error.issues.forEach((i) => {
+        errs[i.path[0] as string] = i.message
+      })
+      setFieldErrors(errs)
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const response = await createJob({
+        sourceChain: formData.sourceChain,
+        sourceAsset: formData.sourceAsset,
+        amount: Number(formData.amount),
+        destinationChain: formData.destinationChain,
+        destinationAsset: formData.destinationAsset,
+        destinationAddress: formData.destinationAddress,
+        releaseAt: new Date(formData.releaseAt).toISOString(),
+        notes: formData.notes || undefined,
+      })
+      toast({ title: "Job Created", description: "Save your Job ID to track the rotation." })
+      onSuccess(response.job)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create rotation")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -105,165 +113,166 @@ export function CreateRotationForm({ onSuccess }: CreateRotationFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Source */}
-          <div className="space-y-4 rounded-lg border border-[var(--color-border)] p-4">
-            <h4 className="text-sm font-semibold text-[var(--color-foreground)]">Source</h4>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="sourceChain">Chain</Label>
-                <Select value={formData.sourceChain} onValueChange={(val) => updateField("sourceChain", val)}>
-                  <SelectTrigger id="sourceChain">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {chains.map((chain) => (
-                      <SelectItem key={chain} value={chain}>
-                        {chain}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {step === 1 && (
+            <div className="space-y-4 rounded-lg border p-4">
+              <h4 className="text-sm font-semibold">Step 1: Source</h4>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="sourceChain">Chain</Label>
+                  <Select value={formData.sourceChain} onValueChange={(val) => updateField("sourceChain", val)}>
+                    <SelectTrigger id="sourceChain">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CHAINS.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sourceAsset">Asset</Label>
+                  <Select value={formData.sourceAsset} onValueChange={(val) => updateField("sourceAsset", val)}>
+                    <SelectTrigger id="sourceAsset">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ASSETS[formData.sourceChain].map((a) => (
+                        <SelectItem key={a} value={a}>
+                          {a}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="sourceAsset">Asset</Label>
-                <Select value={formData.sourceAsset} onValueChange={(val) => updateField("sourceAsset", val)}>
-                  <SelectTrigger id="sourceAsset">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {assets[formData.sourceChain]?.map((asset) => (
-                      <SelectItem key={asset} value={asset}>
-                        {asset}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="amount">Amount</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.0001"
+                  placeholder="0.00"
+                  value={formData.amount}
+                  onChange={(e) => updateField("amount", e.target.value)}
+                  aria-invalid={!!fieldErrors.amount}
+                />
+                {fieldErrors.amount && <p className="text-sm text-red-400">{fieldErrors.amount}</p>}
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.000001"
-                placeholder="0.00"
-                value={formData.amount}
-                onChange={(e) => updateField("amount", e.target.value)}
-                aria-invalid={!!fieldErrors.amount}
-                aria-describedby={fieldErrors.amount ? "amount-error" : undefined}
-              />
-              {fieldErrors.amount && (
-                <p id="amount-error" className="text-sm text-red-400">
-                  {fieldErrors.amount}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Destination */}
-          <div className="space-y-4 rounded-lg border border-[var(--color-border)] p-4">
-            <h4 className="text-sm font-semibold text-[var(--color-foreground)]">Destination</h4>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="destinationChain">Chain</Label>
-                <Select value={formData.destinationChain} onValueChange={(val) => updateField("destinationChain", val)}>
-                  <SelectTrigger id="destinationChain">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {chains.map((chain) => (
-                      <SelectItem key={chain} value={chain}>
-                        {chain}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="destinationAsset">Asset</Label>
-                <Select value={formData.destinationAsset} onValueChange={(val) => updateField("destinationAsset", val)}>
-                  <SelectTrigger id="destinationAsset">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {assets[formData.destinationChain]?.map((asset) => (
-                      <SelectItem key={asset} value={asset}>
-                        {asset}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="destinationAddress">Address</Label>
-              <Input
-                id="destinationAddress"
-                placeholder="0x... or account.near"
-                value={formData.destinationAddress}
-                onChange={(e) => updateField("destinationAddress", e.target.value)}
-                aria-invalid={!!fieldErrors.destinationAddress}
-                aria-describedby={fieldErrors.destinationAddress ? "address-error" : undefined}
-              />
-              {fieldErrors.destinationAddress && (
-                <p id="address-error" className="text-sm text-red-400">
-                  {fieldErrors.destinationAddress}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Schedule */}
-          <div className="space-y-4 rounded-lg border border-[var(--color-border)] p-4">
-            <h4 className="text-sm font-semibold text-[var(--color-foreground)]">Schedule</h4>
-            <div className="space-y-2">
-              <Label htmlFor="releaseAt">Release At</Label>
-              <Input
-                id="releaseAt"
-                type="datetime-local"
-                value={formData.releaseAt}
-                onChange={(e) => updateField("releaseAt", e.target.value)}
-                aria-invalid={!!fieldErrors.releaseAt}
-                aria-describedby={fieldErrors.releaseAt ? "release-error" : "release-help"}
-              />
-              {fieldErrors.releaseAt ? (
-                <p id="release-error" className="text-sm text-red-400">
-                  {fieldErrors.releaseAt}
-                </p>
-              ) : (
-                <p id="release-help" className="text-xs text-[var(--color-muted-foreground)]">
-                  Time shown in your local timezone
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes (optional)</Label>
-              <Textarea
-                id="notes"
-                placeholder="Add any notes about this rotation..."
-                value={formData.notes}
-                onChange={(e) => updateField("notes", e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-
-          {error && (
-            <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400" role="alert">
-              {error}
             </div>
           )}
 
-          <Button type="submit" disabled={isSubmitting} className="w-full">
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              "Create Rotation"
+          {step === 2 && (
+            <div className="space-y-4 rounded-lg border p-4">
+              <h4 className="text-sm font-semibold">Step 2: Destination</h4>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="destinationChain">Chain</Label>
+                  <Select value={formData.destinationChain} onValueChange={(val) => updateField("destinationChain", val)}>
+                    <SelectTrigger id="destinationChain">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CHAINS.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="destinationAsset">Asset</Label>
+                  <Select
+                    value={formData.destinationAsset}
+                    onValueChange={(val) => updateField("destinationAsset", val)}
+                  >
+                    <SelectTrigger id="destinationAsset">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ASSETS[formData.destinationChain].map((a) => (
+                        <SelectItem key={a} value={a}>
+                          {a}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="destinationAddress">
+                  Address{" "}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="inline h-3 w-3 text-[var(--color-zcash-gold)]" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Enter a valid address for the destination chain (e.g. 0x… or account.near).
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Label>
+                <Input
+                  id="destinationAddress"
+                  placeholder="0x... or account.near"
+                  value={formData.destinationAddress}
+                  onChange={(e) => updateField("destinationAddress", e.target.value)}
+                  aria-invalid={!!fieldErrors.destinationAddress}
+                />
+                {fieldErrors.destinationAddress && <p className="text-sm text-red-400">{fieldErrors.destinationAddress}</p>}
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4 rounded-lg border p-4">
+              <h4 className="text-sm font-semibold">Step 3: Schedule</h4>
+              <div className="space-y-2">
+                <Label htmlFor="releaseAt">Release At</Label>
+                <Input
+                  id="releaseAt"
+                  type="datetime-local"
+                  value={formData.releaseAt}
+                  onChange={(e) => updateField("releaseAt", e.target.value)}
+                  aria-invalid={!!fieldErrors.releaseAt}
+                />
+                {fieldErrors.releaseAt && <p className="text-sm text-red-400">{fieldErrors.releaseAt}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes (optional)</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Add any notes..."
+                  value={formData.notes}
+                  onChange={(e) => updateField("notes", e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {error && <div className="rounded border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">{error}</div>}
+
+          <div className="flex items-center justify-between">
+            {step > 1 && (
+              <Button type="button" variant="ghost" onClick={() => setStep(step - 1)}>
+                Back
+              </Button>
             )}
-          </Button>
+            {step < 3 && (
+              <Button type="button" onClick={() => setStep(step + 1)}>
+                Next
+              </Button>
+            )}
+            {step === 3 && (
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Create Rotation"}
+              </Button>
+            )}
+          </div>
         </form>
       </CardContent>
     </Card>
