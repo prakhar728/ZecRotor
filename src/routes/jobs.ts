@@ -83,7 +83,7 @@ app.post('/', async (c) => {
   };
 
   state.jobs.push(job);
-  console.log(job);
+  console.log(job);  // debug and remove
   
   return c.json(
     {

@@ -6,12 +6,9 @@ import { NEAR } from "@near-js/tokens";
 export async function processDueJobs() {
   const ts = nowEpoch();
 
-  console.log("Scheduler on!");
-
   for (const job of state.jobs) {
     const deposit_address = job.deposit_address;
 
-    console.log("job is", job);
     console.log(job.status !== 'PENDING' && job.status !== 'PENDING_DEPOSIT');
     console.log(job.execute_at_epoch, ts);
 
@@ -23,7 +20,6 @@ export async function processDueJobs() {
       console.log("Expected from address:", job.sender_address);
 
       const { txns } = await fetchTxnsFromTo(deposit_address, job.sender_address, { per_page: 25 });
-      console.log(txns);
 
       for (const tx of txns) {
         const txTimeEpochMinute = nsToEpochMinute(tx.block_timestamp);
@@ -32,14 +28,11 @@ export async function processDueJobs() {
         if (txTimeEpochMinute < job.created_at_epoch) continue;
 
         const action = tx.actions.find((a: any) => a.action === 'TRANSFER' && a.deposit);
-        console.log("Action is", action);
         
         if (!action) continue;
 
         const depositYocto = yoctoFromApi(action.deposit);
         const expectedYocto = NEAR.toUnits(job.amount);
-        
-        console.log(depositYocto, expectedYocto);
         
         if (depositYocto === expectedYocto) {
           console.log("Deposit verified for job", job.job_id);
