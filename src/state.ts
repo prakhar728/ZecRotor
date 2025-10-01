@@ -1,4 +1,4 @@
-export type JobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+export type JobStatus = 'PENDING_DEPOSIT' | 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
 export type JobEvent =
   | { ts_epoch: number; type: 'JOB_CREATED'; payload: Record<string, unknown> }

@@ -53,22 +53,13 @@ function validateCreate(body: any) {
 
 // POST /api/jobs
 app.post('/', async (c) => {
-  console.log("Hit");
-
   const body = await c.req.json().catch(() => ({}));
-
-  console.log(body);
-
   const errors = validateCreate(body);
-  console.log(errors);
-
   if (errors.length) return c.json({ errors }, 400);
 
   const job_id = uuid();
   const deposit_address = makeDepositAddress(job_id);
   const ts = nowEpoch();
-
-  console.log(job_id);
   
   const job: Job = {
     job_id,
@@ -78,7 +69,7 @@ app.post('/', async (c) => {
     destination_token: String(body.destinationAsset).toUpperCase(),
     execute_at_epoch: Number(body.execute_at_epoch),
     deposit_address,
-    status: 'PENDING',
+    status: 'PENDING_DEPOSIT',
     events: [
       { ts_epoch: ts, type: 'JOB_CREATED', payload: {} },
       { ts_epoch: ts, type: 'DEPOSIT_ADDRESS_ISSUED', payload: { deposit_address } },
@@ -88,7 +79,8 @@ app.post('/', async (c) => {
   };
 
   state.jobs.push(job);
-
+  console.log(job);
+  
   return c.json(
     {
       job_id: job.job_id,
