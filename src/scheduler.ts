@@ -1,4 +1,4 @@
-import { state, nowEpoch } from './state';
+import { state, nowEpoch, Job } from './state';
 import { fetchTxnsFromTo } from './utils/near-blocks-api';
 import { agentAccountId } from "@neardefi/shade-agent-js";
 import { nsToEpochMinute, toYocto } from './utils/utils';
@@ -46,36 +46,34 @@ export async function processDueJobs() {
         }
       }
       continue; // don’t drop into processing this cycle until next tick
-    } else {
-      // === PROCESSING jobs ===
-      job.status = 'PROCESSING';
-      job.updated_at_epoch = ts;
-      job.events.push({ ts_epoch: ts, type: 'PROCESSING_STARTED', payload: {} });
-
-      try {
-        await new Promise((r) => setTimeout(r, 50));
-        const fakeTx = {
-          tx_id: `fake_${job.job_id.slice(0, 8)}_${ts}`,
-          sent_at_epoch: ts,
-          to: job.destination_address,
-          token: job.destination_token,
-        };
-        job.events.push({ ts_epoch: ts, type: 'TX_SUBMITTED_FAKE', payload: fakeTx });
-        job.status = 'COMPLETED';
-        job.updated_at_epoch = nowEpoch();
-        job.events.push({ ts_epoch: job.updated_at_epoch, type: 'JOB_COMPLETED', payload: {} });
-      } catch (e: any) {
-        job.status = 'FAILED';
-        job.updated_at_epoch = nowEpoch();
-        job.events.push({
-          ts_epoch: job.updated_at_epoch,
-          type: 'ERROR',
-          payload: { message: e?.message || String(e) },
-        });
-      }
     }
 
+    // === PROCESSING jobs ===
+    job.status = 'PROCESSING';
+    job.updated_at_epoch = ts;
+    job.events.push({ ts_epoch: ts, type: 'PROCESSING_STARTED', payload: {} });
 
+    try {
+      await new Promise((r) => setTimeout(r, 50));
+      const fakeTx = {
+        tx_id: `fake_${job.job_id.slice(0, 8)}_${ts}`,
+        sent_at_epoch: ts,
+        to: job.destination_address,
+        token: job.destination_token,
+      };
+      job.events.push({ ts_epoch: ts, type: 'TX_SUBMITTED_FAKE', payload: fakeTx });
+      job.status = 'COMPLETED';
+      job.updated_at_epoch = nowEpoch();
+      job.events.push({ ts_epoch: job.updated_at_epoch, type: 'JOB_COMPLETED', payload: {} });
+    } catch (e: any) {
+      job.status = 'FAILED';
+      job.updated_at_epoch = nowEpoch();
+      job.events.push({
+        ts_epoch: job.updated_at_epoch,
+        type: 'ERROR',
+        payload: { message: e?.message || String(e) },
+      });
+    }
   }
 }
 
