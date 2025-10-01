@@ -3,9 +3,9 @@ export const CHAINS = ["ETH", "NEAR", "ZCASH"] as const
 export type Chain = (typeof CHAINS)[number]
 
 export const ASSETS: Record<Chain, string[]> = {
-  ETH: ["ETH", "USDC"],
-  NEAR: ["NEAR", "USDC"],
+  NEAR: ["NEAR"],
   ZCASH: ["ZEC"],
+  ETH: []
 }
 
 // Optional: Explorer base URLs if you want to add “View in Explorer” links

@@ -42,13 +42,15 @@ export default function HomePage() {
     setSearchError(null)
     setSearchedJobId(jobId)
     try {
-      const response = await getJob(jobId)
-      setSearchedJob(response.job)
+      const response = await getJob(jobId) // backend returns the job object directly
+      const job = normalizeJob(response)
+      setSearchedJob(job)
     } catch (error) {
       setSearchError(error instanceof Error ? error.message : "Failed to load job")
       setSearchedJob(null)
     }
   }
+
 
   const handleTrackStatus = (jobId: string) => {
     const statusSection = document.getElementById("status-section")
@@ -56,22 +58,40 @@ export default function HomePage() {
     handleJobSearch(jobId)
   }
 
+  function normalizeJob(j: any): Job {
+    return {
+      id: j.job_id,
+      senderAddress: j.sender_address,
+      sourceAsset: j.sending_token,
+      destinationAddress: j.destination_address,
+      destinationAsset: j.destination_token,
+      executeAtEpoch: j.execute_at_epoch,
+      depositAddress: j.deposit_address,
+      status: String(j.status).toUpperCase(),
+      events: j.events,
+      createdAtEpoch: j.created_at_epoch,
+      updatedAtEpoch: j.updated_at_epoch,
+    } as unknown as Job;
+  }
+
   // Poll while job is not terminal
   const shouldPoll =
-    searchedJob && searchedJob.status !== "completed" && searchedJob.status !== "failed"
+    searchedJob && !["COMPLETED", "FAILED"].includes(searchedJob.status);
 
   const { refresh: refreshJob, isPolling } = usePolling({
     enabled: !!shouldPoll,
     interval: 10000,
     fn: async () => {
       if (searchedJobId) {
-        const response = await getJob(searchedJobId)
-        setSearchedJob(response.job)
-        return response.job
+        const response = await getJob(searchedJobId) // direct job object
+        const job = normalizeJob(response)
+        setSearchedJob(job)
+        return job
       }
       return null
     },
   })
+
 
   return (
     <div className="container mx-auto px-4 py-12">

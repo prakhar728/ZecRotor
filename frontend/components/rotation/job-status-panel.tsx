@@ -12,11 +12,43 @@ import type { Job } from "@/types/job"
 import { ArrowRight, Calendar, Clock, AlertTriangle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
+// Helper to read either camelCase (UI) or snake_case (backend) shapes
+function read<T = any>(obj: any, ...keys: string[]): T | undefined {
+  for (const k of keys) if (obj?.[k] !== undefined) return obj[k]
+  return undefined
+}
+
 interface JobStatusPanelProps {
   job: Job
 }
 
 export function JobStatusPanel({ job }: JobStatusPanelProps) {
+  // Normalize fields so this component works with both UI-normalized jobs and raw backend jobs
+  const status = String(read(job, "status") ?? "PENDING").toUpperCase()
+  const jobId = read<string>(job, "id", "job_id") ?? ""
+
+  const createdAtIso =
+    read<string>(job, "createdAt") ??
+    (typeof read<number>(job, "createdAtEpoch", "created_at_epoch") === "number"
+      ? new Date(read<number>(job, "createdAtEpoch", "created_at_epoch")! * 1000).toISOString()
+      : undefined)
+
+  const releaseAtIso =
+    read<string>(job, "releaseAt") ??
+    (typeof read<number>(job, "executeAtEpoch", "execute_at_epoch") === "number"
+      ? new Date(read<number>(job, "executeAtEpoch", "execute_at_epoch")! * 1000).toISOString()
+      : undefined)
+
+  const sourceChain = read<string>(job, "sourceChain") ?? "—"
+  const sourceAsset = read<string>(job, "sourceAsset", "sending_token") ?? "—"
+  const destinationChain = read<string>(job, "destinationChain") ?? "—"
+  const destinationAsset = read<string>(job, "destinationAsset") ?? "—"
+
+  const createdDisplay = createdAtIso ? formatDate(createdAtIso) : "—"
+  const releaseDisplay = releaseAtIso
+    ? `${formatDate(releaseAtIso)} (${formatRelative(releaseAtIso)})`
+    : "—"
+
   return (
     <Card>
       <CardContent className="space-y-6 pt-6">
@@ -25,21 +57,21 @@ export function JobStatusPanel({ job }: JobStatusPanelProps) {
           <div>
             <p className="text-sm text-[var(--color-muted-foreground)]">Status</p>
             <div className="mt-1">
-              <StatusPill status={job.status} />
+              <StatusPill status={status} />
             </div>
           </div>
           <div className="text-right">
             <p className="text-sm text-[var(--color-muted-foreground)]">Job ID</p>
-            <p className="mt-1 font-mono text-xs text-[var(--color-foreground)]">{job.id}</p>
+            <p className="mt-1 font-mono text-xs text-[var(--color-foreground)]">{jobId}</p>
           </div>
         </div>
 
         {/* Amount */}
-        {job.amount && (
+        {((job as any).amount ?? null) !== null && (job as any).amount !== undefined && (
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)]/30 p-4 text-center">
             <p className="text-sm text-[var(--color-muted-foreground)]">Amount</p>
             <p className="mt-1 text-xl font-semibold text-[var(--color-foreground)]">
-              {formatMoney(job.amount, job.sourceAsset)}
+              {formatMoney((job as any).amount, sourceAsset)}
             </p>
           </div>
         )}
@@ -49,21 +81,21 @@ export function JobStatusPanel({ job }: JobStatusPanelProps) {
           <TimelineRow
             icon={<Calendar className="h-4 w-4 text-[var(--color-muted-foreground)]" />}
             label="Created"
-            value={formatDate(job.createdAt)}
+            value={createdDisplay}
           />
           <TimelineRow
             icon={<Clock className="h-4 w-4 text-[var(--color-muted-foreground)]" />}
             label="Release At"
-            value={`${formatDate(job.releaseAt)} (${formatRelative(job.releaseAt)})`}
+            value={releaseDisplay}
           />
-          {job.status === "completed" && (
+          {status === "COMPLETED" && (
             <TimelineRow
               icon={<Clock className="h-4 w-4 text-[var(--color-accent-mint)]" />}
               label="Completed"
-              value={formatDate(job.releaseAt)}
+              value={releaseAtIso ? formatDate(releaseAtIso) : "—"}
             />
           )}
-          {job.status === "failed" && (
+          {status === "FAILED" && (
             <TimelineRow
               icon={<AlertTriangle className="h-4 w-4 text-red-400" />}
               label="Failed"
@@ -78,7 +110,7 @@ export function JobStatusPanel({ job }: JobStatusPanelProps) {
             Route
           </p>
           <div className="flex items-center justify-center gap-3">
-            <ChainBadge chain={job.sourceChain} asset={job.sourceAsset} />
+            <ChainBadge chain={sourceChain} asset={sourceAsset} />
             <ArrowRight className="h-4 w-4 text-[var(--color-muted-foreground)]" />
             <div className="flex flex-col items-center">
               <Badge variant="outline" className="border-[var(--color-zcash-gold)] text-[var(--color-zcash-gold)]">
@@ -87,7 +119,7 @@ export function JobStatusPanel({ job }: JobStatusPanelProps) {
               <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">Shielded</p>
             </div>
             <ArrowRight className="h-4 w-4 text-[var(--color-muted-foreground)]" />
-            <ChainBadge chain={job.destinationChain} asset={job.destinationAsset} />
+            <ChainBadge chain={destinationChain} asset={destinationAsset} />
           </div>
         </div>
       </CardContent>

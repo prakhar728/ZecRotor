@@ -43,30 +43,39 @@ function pickJobView(job: Job) {
 
 function validateCreate(body: any) {
   const errors: string[] = [];
-  const req = ['sender_address', 'sending_token', 'destination_address', 'destination_token', 'execute_at_epoch'];
+  const req = ['senderAddress', 'sourceAsset', 'destinationAddress', 'destinationAsset', 'releaseAt'];
   for (const f of req) if (!(f in body)) errors.push(`Missing field: ${f}`);
-  const epoch = Number(body?.execute_at_epoch);
-  if (!Number.isFinite(epoch)) errors.push('execute_at_epoch must be a number (EPOCH seconds)');
-  if (Number.isFinite(epoch) && epoch < nowEpoch() - 60) errors.push('execute_at_epoch is in the past (>60s)');
-  return errors;
+  const epoch = Math.floor(new Date(body?.releaseAt).getTime() / 1000);
+  if (!Number.isFinite(epoch)) errors.push("releaseAt must be a valid date");
+  if (epoch < nowEpoch() - 60) errors.push("releaseAt is in the past (>60s)");
+  return errors; 
 }
 
 // POST /api/jobs
 app.post('/', async (c) => {
+  console.log("Hit");
+
   const body = await c.req.json().catch(() => ({}));
+
+  console.log(body);
+
   const errors = validateCreate(body);
+  console.log(errors);
+
   if (errors.length) return c.json({ errors }, 400);
 
   const job_id = uuid();
   const deposit_address = makeDepositAddress(job_id);
   const ts = nowEpoch();
 
+  console.log(job_id);
+  
   const job: Job = {
     job_id,
-    sender_address: String(body.sender_address),
-    sending_token: String(body.sending_token).toUpperCase(),
-    destination_address: String(body.destination_address),
-    destination_token: String(body.destination_token).toUpperCase(),
+    sender_address: String(body.senderAddress),
+    sending_token: String(body.sourceAsset).toUpperCase(),
+    destination_address: String(body.destinationAddress),
+    destination_token: String(body.destinationAsset).toUpperCase(),
     execute_at_epoch: Number(body.execute_at_epoch),
     deposit_address,
     status: 'PENDING',

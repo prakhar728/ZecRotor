@@ -15,33 +15,58 @@ import type { Job } from "@/types/job"
 import { CheckCircle2, ArrowRight, Clock, ExternalLink, ChevronDown, ChevronUp } from "lucide-react"
 import { EXPLORERS } from "@/config/chains"
 
+// Helpers to read either camelCase (UI) or snake_case (backend) shapes
+function read<T = any>(obj: any, ...keys: string[]): T | undefined {
+  for (const k of keys) if (obj?.[k] !== undefined) return obj[k]
+  return undefined
+}
+
 interface DepositDetailsProps {
   job: Job
   onTrackStatus: (jobId: string) => void
 }
 
 export function DepositDetails({ job, onTrackStatus }: DepositDetailsProps) {
-  const depositAddress = job.depositAddress || "Generating..."
+  const depositAddress =
+    read<string>(job, "depositAddress", "deposit_address") ?? "Generating..."
+  const sourceAsset = read<string>(job, "sourceAsset", "sending_token") ?? "—"
+  const sourceChain = read<string>(job, "sourceChain") ?? "—"
+  const jobId = read<string>(job, "id", "job_id") ?? ""
+  const executeAtEpoch = read<number>(job, "executeAtEpoch", "execute_at_epoch")
+  const releaseAtIso = read<string>(job, "releaseAt")
+  const releaseAtMs =
+    releaseAtIso ? Date.parse(releaseAtIso) :
+    (typeof executeAtEpoch === "number" ? executeAtEpoch * 1000 : undefined)
+
   const minConfirmations = 3
   const [showNotice, setShowNotice] = React.useState(true)
 
   // Countdown timer
   const [remaining, setRemaining] = React.useState("")
   React.useEffect(() => {
-    if (!job.releaseAt) return
-    const interval = setInterval(() => {
-      const diff = new Date(job.releaseAt).getTime() - Date.now()
+    if (!releaseAtMs) return
+    const tick = () => {
+      const diff = releaseAtMs - Date.now()
       if (diff <= 0) {
         setRemaining("Ready for release")
-        clearInterval(interval)
+        return true
       } else {
         const hours = Math.floor(diff / (1000 * 60 * 60))
         const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
         setRemaining(`${hours}h ${mins}m`)
+        return false
       }
+    }
+    // run once immediately
+    const done = tick()
+    if (done) return
+
+    const interval = setInterval(() => {
+      if (tick()) clearInterval(interval)
     }, 60000)
+
     return () => clearInterval(interval)
-  }, [job.releaseAt])
+  }, [releaseAtMs])
 
   return (
     <Card className="border-[var(--color-zcash-gold)]/30">
@@ -71,13 +96,13 @@ export function DepositDetails({ job, onTrackStatus }: DepositDetailsProps) {
         {/* Job Details */}
         <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)]/30 p-4">
           <InfoRow label="Amount">
-            {formatMoney(job.amount || 0, job.sourceAsset)}
+            {formatMoney((job as any).amount || 0, sourceAsset)}
           </InfoRow>
           <InfoRow label="Min. Confirmations">{minConfirmations}</InfoRow>
           <InfoRow label="Job ID">
-            <CopyField value={job.id} monospace  label="job-id"/>
+            <CopyField value={jobId} monospace label="job-id" />
           </InfoRow>
-          {job.releaseAt && (
+          {!!releaseAtMs && (
             <InfoRow label="Releases In">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-[var(--color-muted-foreground)]" />
@@ -113,7 +138,7 @@ export function DepositDetails({ job, onTrackStatus }: DepositDetailsProps) {
             <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-[var(--color-snow)]">
               <li>Save your Job ID to track this rotation</li>
               <li>
-                Only send {job.sourceAsset} on {job.sourceChain}
+                Only send {sourceAsset} on {sourceChain}
               </li>
               <li>Funds will be released at the scheduled time</li>
             </ul>
@@ -121,7 +146,7 @@ export function DepositDetails({ job, onTrackStatus }: DepositDetailsProps) {
         </div>
 
         {/* Track Status CTA */}
-        <Button onClick={() => onTrackStatus(job.id)} variant="outline" className="w-full">
+        <Button onClick={() => onTrackStatus(jobId)} variant="outline" className="w-full">
           Track Status
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>

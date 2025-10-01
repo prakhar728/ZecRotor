@@ -23,6 +23,8 @@ export async function fetchJson<T>(url: string, options?: RequestInit): Promise<
       },
     })
 
+    console.log(response);
+    
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       throw new ApiError(

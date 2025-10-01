@@ -16,7 +16,6 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-4">
-          <NetworkBadge />
           <nav className="flex items-center gap-2">
             <Link
               href="#"

@@ -34,7 +34,7 @@ const schema = z.object({
 })
 
 export function CreateRotationForm({ onSuccess }: CreateRotationFormProps) {
-  const { createJob } = useJobsApi()
+  const { createJob, getJob } = useJobsApi()
   const { toast } = useToast()
 
   const [isSubmitting, setIsSubmitting] = React.useState(false)
@@ -43,11 +43,12 @@ export function CreateRotationForm({ onSuccess }: CreateRotationFormProps) {
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({})
 
   const [formData, setFormData] = React.useState({
-    sourceChain: "ETH",
-    sourceAsset: "USDC",
+    sourceChain: "NEAR",
+    sourceAsset: "NEAR",
     amount: "",
-    destinationChain: "NEAR",
-    destinationAsset: "NEAR",
+    senderAddress: "",
+    destinationChain: "ZCASH",
+    destinationAsset: "ZEC",
     destinationAddress: "",
     releaseAt: toIsoLocal(new Date(Date.now() + 3600000)), // 1 hour from now
     notes: "",
@@ -86,23 +87,31 @@ export function CreateRotationForm({ onSuccess }: CreateRotationFormProps) {
 
     setIsSubmitting(true)
     try {
-      const response = await createJob({
+      const payload = {
         sourceChain: formData.sourceChain,
         sourceAsset: formData.sourceAsset,
         amount: Number(formData.amount),
+        senderAddress: formData.senderAddress,
         destinationChain: formData.destinationChain,
         destinationAsset: formData.destinationAsset,
         destinationAddress: formData.destinationAddress,
         releaseAt: new Date(formData.releaseAt).toISOString(),
+        // ADD: epoch seconds for backend's execute_at_epoch
+        execute_at_epoch: Math.floor(new Date(formData.releaseAt).getTime() / 1000),
         notes: formData.notes || undefined,
-      })
+      }
+
+      const response = await createJob(payload) // expects { job_id, deposit_address, execute_at_epoch, status }
+      const fullJob = await getJob(response.job_id) // fetch full job object
+
       toast({ title: "Job Created", description: "Save your Job ID to track the rotation." })
-      onSuccess(response.job)
+      onSuccess(fullJob)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create rotation")
     } finally {
       setIsSubmitting(false)
     }
+
   }
 
   return (
@@ -160,6 +169,15 @@ export function CreateRotationForm({ onSuccess }: CreateRotationFormProps) {
                   aria-invalid={!!fieldErrors.amount}
                 />
                 {fieldErrors.amount && <p className="text-sm text-red-400">{fieldErrors.amount}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="senderAddress">Sender Address</Label>
+                <Input
+                  id="senderAddress"
+                  placeholder="Your wallet address"
+                  value={formData.senderAddress || ""}
+                  onChange={(e) => updateField("senderAddress", e.target.value)}
+                />
               </div>
             </div>
           )}

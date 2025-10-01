@@ -8,6 +8,7 @@ export interface CreateJobBody {
   sourceChain: Chain
   sourceAsset: Asset
   amount: number
+  senderAddress: string
   destinationChain: Chain
   destinationAsset: Asset
   destinationAddress: string
