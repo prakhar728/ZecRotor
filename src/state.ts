@@ -1,3 +1,5 @@
+import { GetExecutionStatusResponse } from "@defuse-protocol/one-click-sdk-typescript";
+
 export type JobStatus = 'PENDING_DEPOSIT' | 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
 export type JobEvent =
@@ -5,7 +7,7 @@ export type JobEvent =
   | { ts_epoch: number; type: 'DEPOSIT_ADDRESS_ISSUED'; payload: { deposit_address: string } }
   | { ts_epoch: number; type: 'DEPOSIT_RECEIVED_FAKE'; payload: { from_address: string; amount: string; token: string } }
   | { ts_epoch: number; type: 'PROCESSING_STARTED'; payload: Record<string, unknown> }
-  | { ts_epoch: number; type: 'TX_SUBMITTED_FAKE'; payload: { tx_id: string; sent_at_epoch: number; to: string; token: string } }
+  | { ts_epoch: number; type: 'TX_SUBMITTED'; payload: { finalStatus: GetExecutionStatusResponse.status } }
   | { ts_epoch: number; type: 'JOB_COMPLETED'; payload: Record<string, unknown> }
   | { ts_epoch: number; type: 'ERROR'; payload: { message: string } };
 

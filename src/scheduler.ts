@@ -1,3 +1,5 @@
+import { MAIN_NEAR_ACOUNT, MAIN_NEAR_PRIVATE_KEY } from './config';
+import { fullSwap } from './intents/6-full-swap';
 import { state, nowEpoch, Job } from './state';
 import { fetchTxnsFromTo } from './utils/near-blocks-api';
 import { nsToEpochMinute, toYocto, yoctoFromApi } from './utils/utils';
@@ -69,7 +71,10 @@ export async function processDueJobs() {
         to: job.destination_address,
         token: job.destination_token,
       };
-      job.events.push({ ts_epoch: ts, type: 'TX_SUBMITTED_FAKE', payload: fakeTx });
+
+      const { finalStatus } = await fullSwap(MAIN_NEAR_ACOUNT, MAIN_NEAR_PRIVATE_KEY, job.destination_address, "", "", NEAR.toUnits(job.amount).toString());
+
+      job.events.push({ ts_epoch: ts, type: 'TX_SUBMITTED', payload: finalStatus as any });
       job.status = 'COMPLETED';
       job.updated_at_epoch = nowEpoch();
       job.events.push({ ts_epoch: job.updated_at_epoch, type: 'JOB_COMPLETED', payload: {} });
