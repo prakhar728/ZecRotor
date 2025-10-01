@@ -13,6 +13,7 @@ app.get("/", async (c) => {
       "ethereum-1",
     );
 
+
     // Get the balance of the address
     const balance = await Evm.getBalance(senderAddress);
     

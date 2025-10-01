@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { state, nowEpoch, Job } from '../state';
 import { agentAccountId } from "@neardefi/shade-agent-js";
+import { MAIN_NEAR_ACOUNT } from '../config';
 
 
 const app = new Hono();
@@ -60,7 +61,7 @@ app.post('/', async (c) => {
   if (errors.length) return c.json({ errors }, 400);
 
   const job_id = uuid();
-  const {accountId: deposit_address } = await agentAccountId();
+  const deposit_address = MAIN_NEAR_ACOUNT;
   const ts = nowEpoch();
   
   const job: Job = {

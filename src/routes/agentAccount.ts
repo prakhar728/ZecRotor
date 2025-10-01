@@ -1,5 +1,8 @@
 import { Hono } from "hono";
 import { agentAccountId, agent } from "@neardefi/shade-agent-js";
+import { KeyPairSigner } from "@near-js/signers";
+import { MAIN_NEAR_ACOUNT, MAIN_NEAR_PRIVATE_KEY, provider } from "../config";
+import { Account } from "@near-js/accounts";
 
 const app = new Hono();
 
