@@ -1,45 +1,51 @@
-# ZecRotor Agent MVP
+# ZecRotor Agent (MVP)
 
 ## 🚀 Overview
-ZecRotor is an experimental **agent-based job scheduler for token rotation**.  
-It allows users to submit a “job” with simple instructions about how and when their funds should move.  
+**ZecRotor** is an experimental **Shade Agent–powered job scheduler** for automated token rotation.  
 
-At the scheduled time, the agent executes (or fakes for now) the outgoing transaction.  
-This MVP forms the foundation for a system that can **swap tokens, shield/unshield them (e.g., on Zcash), and disperse to destination addresses** while keeping flows private.
+It allows users to submit a “job” that describes **how, when, and where funds should move**. At the scheduled time, the agent executes the outgoing transaction.  
+
+This MVP is the first step toward a system that can:  
+- Swap tokens across chains  
+- Shield/unshield assets (e.g., via Zcash)  
+- Disperse funds to a final destination  
+- Preserve **privacy** by abstracting flows through an autonomous agent  
 
 ---
 
 ## ⚙️ How It Works
-1. **User submits a job** with:
-   - `sender_address` – where funds come from  
-   - `sending_token` – token being deposited  
-   - `destination_address` – final recipient  
-   - `destination_token` – token to be sent out  
-   - `execute_at_epoch` – when the transaction should happen  
+1. **User submits a job** with:  
+   - `sender_address` → the origin of funds  
+   - `sending_token` → the token being deposited  
+   - `destination_address` → the final recipient  
+   - `destination_token` → the token to send out  
+   - `execute_at_epoch` → when the transaction should execute  
 
 2. **Agent generates a deposit address** and stores the job in memory.  
 
-3. **Background scheduler** runs every minute:
-   - When `execute_at_epoch` is reached, the agent processes the job.  
-   - Currently, it generates a **fake transaction** for testing.  
+3. **Background scheduler** (runs every minute):  
+   - Watches the deposit address for incoming funds  
+   - If funds are confirmed → marks job as **FUNDED**  
+   - Waits until `execute_at_epoch` → processes the job  
+   - Currently produces a **fake transaction** for testing  
 
-4. **Track job status**:
-   - Jobs move through states: `PENDING → PROCESSING → COMPLETED/FAILED`.  
-   - Each job has an **event log** (creation, deposit, processing, tx submitted).  
+4. **Job lifecycle tracking**:  
+   - `PENDING_DEPOSIT → FUNDED → PROCESSING → COMPLETED | FAILED`  
+   - Each job includes an **event log** with timestamps and context  
 
 ---
 
 ## ✨ Features (MVP)
-- Simple REST API for creating & tracking jobs  
-- Minute-accurate scheduler (cron-like loop)  
-- In-memory storage (arrays/JSON, no DB needed)  
-- Fake transactions to simulate execution  
-- Event log per job for transparency  
-- Optional fake deposit simulation endpoint  
+- 🚀 Simple REST API for job creation and tracking  
+- 🕑 Minute-level scheduler (cron-style loop)  
+- 🗂 In-memory job storage (no DB required)  
+- 🎭 Fake transaction execution for testing flows  
+- 📝 Event log per job for transparency  
+- 🧪 Optional deposit simulation endpoint  
 
 ---
 
-## 📌 Example Flow
+## 📌 Example Usage
 
 ### 1. Create a Job
 ```http
@@ -55,13 +61,13 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
+**Response**
 ```json
 {
   "job_id": "uuid-1234",
   "deposit_address": "demo-deposit-xxxx-123456",
   "execute_at_epoch": 1696156800,
-  "status": "PENDING"
+  "status": "PENDING_DEPOSIT"
 }
 ```
 
@@ -72,13 +78,14 @@ Content-Type: application/json
 GET /api/jobs/{job_id}
 ```
 
-**Response:**
+**Response**
 ```json
 {
   "job_id": "uuid-1234",
   "status": "COMPLETED",
   "events": [
     { "ts_epoch": 1696156700, "type": "JOB_CREATED" },
+    { "ts_epoch": 1696156750, "type": "DEPOSIT_CONFIRMED" },
     { "ts_epoch": 1696156800, "type": "TX_SUBMITTED_FAKE", "payload": { "tx_id": "fake_uuid_1696156800" } }
   ]
 }
@@ -86,7 +93,7 @@ GET /api/jobs/{job_id}
 
 ---
 
-### 3. Optional: Simulate a Deposit
+### 3. (Optional) Simulate a Deposit
 ```http
 POST /api/jobs/{job_id}/fake-deposit
 Content-Type: application/json
@@ -101,13 +108,14 @@ Content-Type: application/json
 ---
 
 ## 🛣 Roadmap
-- ✅ In-memory job scheduler (fake tx)  
-- 🚧 Add persistence (database)  
-- 🚧 Integrate real blockchain wallets / swap logic  
-- 🚧 Add webhook notifications  
-- 🚧 Enable privacy-preserving rotation with Zcash shield/unshield  
+- ✅ In-memory job scheduler (fake transactions)  
+- 🚧 Persistent storage (DB support)  
+- 🚧 Real blockchain deposit detection  
+- 🚧 Swap execution (Uniswap/DEX integration)  
+- 🚧 Webhook / notification support  
+- 🚧 Privacy-preserving rotation with Zcash shielding/unshielding  
 
 ---
 
 ## 📖 License
-This project is an MVP prototype and for experimental use only.
+This project is an **MVP prototype** and intended **for research and experimental use only**.  
