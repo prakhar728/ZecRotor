@@ -69,6 +69,7 @@ app.post('/', async (c) => {
     destination_token: String(body.destinationAsset).toUpperCase(),
     execute_at_epoch: Number(body.execute_at_epoch),
     deposit_address,
+    amount: Number(body.amount),
     status: 'PENDING_DEPOSIT',
     events: [
       { ts_epoch: ts, type: 'JOB_CREATED', payload: {} },

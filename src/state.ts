@@ -17,6 +17,7 @@ export interface Job {
   destination_token: string;
   execute_at_epoch: number;
   deposit_address: string;
+  amount: number;
   status: JobStatus;
   events: JobEvent[];
   created_at_epoch: number;
