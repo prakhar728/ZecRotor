@@ -7,15 +7,23 @@ export async function processDueJobs() {
   const ts = nowEpoch();
   const agentId = await agentAccountId();
 
+  console.log("Scheduler on!");
+  
   for (const job of state.jobs) {
+    console.log("job is", job);
+    console.log(job.status !== 'PENDING' && job.status !== 'PENDING_DEPOSIT');
+    console.log(job.execute_at_epoch, ts);
+    
     if (job.status !== 'PENDING' && job.status !== 'PENDING_DEPOSIT') continue;
-    if (job.execute_at_epoch > ts) continue;
-
+    console.log("here");
+        
     if (job.status === 'PENDING_DEPOSIT') {
       console.log("Checking for Deposit! for Job", job.job_id);
       console.log("Expected from address:", job.sender_address);
 
       const { txns } = await fetchTxnsFromTo(agentId, job.sender_address, { per_page: 25 });
+      console.log(txns);
+      
       for (const tx of txns) {
         const txTimeEpochMinute = nsToEpochMinute(tx.block_timestamp);
 
@@ -47,6 +55,8 @@ export async function processDueJobs() {
       }
       continue; // don’t drop into processing this cycle until next tick
     }
+
+    if (job.execute_at_epoch > ts) continue;
 
     // === PROCESSING jobs ===
     job.status = 'PROCESSING';

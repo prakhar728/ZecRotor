@@ -139,9 +139,6 @@ export function DepositDetails({ job, onTrackStatus }: DepositDetailsProps) {
           {showNotice && (
             <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-[var(--color-snow)]">
               <li>Save your Job ID to track this rotation</li>
-              <li>
-                Only send {sourceAsset} on {sourceChain}
-              </li>
               <li>Funds will be released at the scheduled time</li>
             </ul>
           )}
