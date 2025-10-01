@@ -27,6 +27,8 @@ interface DepositDetailsProps {
 }
 
 export function DepositDetails({ job, onTrackStatus }: DepositDetailsProps) {
+  console.log(job);
+  
   const depositAddress =
     read<string>(job, "depositAddress", "deposit_address") ?? "Generating..."
   const sourceAsset = read<string>(job, "sourceAsset", "sending_token") ?? "—"

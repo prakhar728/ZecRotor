@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { StatusPill } from "@/components/ui/status-pill"
 import { formatDate, formatRelative } from "@/lib/time"
 import { formatChain, formatMoney } from "@/lib/format"
-import type { Job } from "@/types/job"
+import type { Job, JobStatus } from "@/types/job"
 import { ArrowRight, Calendar, Clock, AlertTriangle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
@@ -18,13 +18,24 @@ function read<T = any>(obj: any, ...keys: string[]): T | undefined {
   return undefined
 }
 
+// Map raw/backend status strings to the strict JobStatus union
+function toJobStatus(value: any): JobStatus {
+  const v = String(value ?? "").toLowerCase()
+  if (v === "scheduled" || v === "pending" || v === "created" || v === "queued") return "scheduled"
+  if (v === "running" || v === "processing" || v === "in_progress") return "running"
+  if (v === "completed" || v === "success" || v === "succeeded" || v === "done") return "completed"
+  if (v === "failed" || v === "error") return "failed"
+  // default fallback
+  return "scheduled"
+}
+
 interface JobStatusPanelProps {
   job: Job
 }
 
 export function JobStatusPanel({ job }: JobStatusPanelProps) {
   // Normalize fields so this component works with both UI-normalized jobs and raw backend jobs
-  const status = String(read(job, "status") ?? "PENDING").toUpperCase()
+  const uiStatus: JobStatus = toJobStatus(read(job, "status"))
   const jobId = read<string>(job, "id", "job_id") ?? ""
 
   const createdAtIso =
@@ -57,7 +68,7 @@ export function JobStatusPanel({ job }: JobStatusPanelProps) {
           <div>
             <p className="text-sm text-[var(--color-muted-foreground)]">Status</p>
             <div className="mt-1">
-              <StatusPill status={status} />
+              <StatusPill status={uiStatus} />
             </div>
           </div>
           <div className="text-right">
@@ -88,14 +99,14 @@ export function JobStatusPanel({ job }: JobStatusPanelProps) {
             label="Release At"
             value={releaseDisplay}
           />
-          {status === "COMPLETED" && (
+          {uiStatus === "completed" && (
             <TimelineRow
               icon={<Clock className="h-4 w-4 text-[var(--color-accent-mint)]" />}
               label="Completed"
               value={releaseAtIso ? formatDate(releaseAtIso) : "—"}
             />
           )}
-          {status === "FAILED" && (
+          {uiStatus === "failed" && (
             <TimelineRow
               icon={<AlertTriangle className="h-4 w-4 text-red-400" />}
               label="Failed"
