@@ -4,6 +4,10 @@
 
 - https://explorer.near-intents.org/transactions/6d54835b5333e9b1f66364c140caed9a85e0d027f4fa77726a7043b527e99dbd
 
+# Demo Video
+
+-  https://www.loom.com/share/3310c166cc2d455a9d7ee65ed8217bdc?sid=f93cfc00-2c04-4484-9579-85f89cd2901d
+
 ## Purpose & Scope
 ZecRotor is an experimental **Shade Agent–powered job scheduler** for automated token rotation.  
 It solves the problem of **scheduled, private fund movement** across blockchains by combining:
