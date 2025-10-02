@@ -1,56 +1,64 @@
 # ZecRotor Agent (MVP)
 
-## 🚀 Overview
-**ZecRotor** is an experimental **Shade Agent–powered job scheduler** for automated token rotation.  
+## Purpose & Scope
+ZecRotor is an experimental **Shade Agent–powered job scheduler** for automated token rotation.  
+It solves the problem of **scheduled, private fund movement** across blockchains by combining:
+- Privacy through Zcash shielded transactions
+- Automation through NEAR Shade Agents
 
-It allows users to submit a “job” that describes **how, when, and where funds should move**. At the scheduled time, the agent executes the outgoing transaction.  
-
-This MVP is the first step toward a system that can:  
-- Swap tokens across chains  
-- Shield/unshield assets (e.g., via Zcash)  
-- Disperse funds to a final destination  
-- Preserve **privacy** by abstracting flows through an autonomous agent  
+This MVP demonstrates that real swaps, deposits, and scheduled releases can happen on **mainnet**, with transparent lifecycle tracking.  
+It is intended for research and experimentation and is **not production-ready**.
 
 ---
 
-## ⚙️ How It Works
-1. **User submits a job** with:  
+## Core Features
+- REST API for job creation and tracking
+- In-memory job storage (simple JS/TS array, [state.ts](https://github.com/prakhar728/ZecRotor/blob/main/src/state.ts#L29))
+- Background scheduler running every minute ([scheduler.ts](https://github.com/prakhar728/ZecRotor/blob/main/src/scheduler.ts#L8))
+- Lifecycle management: `PENDING_DEPOSIT → FUNDED → PROCESSING → COMPLETED | FAILED`
+- Event log per job for transparency
+- Real execution on NEAR mainnet with intent swaps into Zcash
+
+---
+
+## Architecture
+
+![Zec Rotor Architecture](./public/ZecRotor.png)
+
+---
+
+## Technology Stack
+- **Backend**: Node.js + TypeScript, Hono server
+- **Blockchain SDKs**: NEAR Intents, Zcash node integration, Shade Agnet Library
+- **Frontend**: React + TailwindCSS (Next.js)
+- **Scheduler**: Custom cron loop in TypeScript
+- **Storage**: In-memory state (array)
+
+---
+
+## How It Works
+1. **User submits a job** with:
    - `sender_address` → the origin of funds  
-   - `sending_token` → the token being deposited  
-   - `destination_address` → the final recipient  
-   - `destination_token` → the token to send out  
+   - `sending_token` → token being deposited  
+   - `destination_address` → final recipient  
+   - `destination_token` → token to send out  
    - `execute_at_epoch` → when the transaction should execute  
-    - Refer to [job.ts](https://github.com/prakhar728/ZecRotor/blob/main/src/routes/jobs.ts#L58) to understand how it works.
+   See [jobs.ts](https://github.com/prakhar728/ZecRotor/blob/main/src/routes/jobs.ts#L58).
 
-2. **Agent generates a deposit address** and stores the job in memory.  
- - The memory is a simple [JS - TS array](https://github.com/prakhar728/ZecRotor/blob/main/src/state.ts#L29). 
+2. **Agent generates a deposit address** and stores the job in memory ([state.ts](https://github.com/prakhar728/ZecRotor/blob/main/src/state.ts#L29)).
 
-3. **Background scheduler** (runs every minute):  
-   - Watches the deposit address for incoming funds   -  [Method definition schedular.ts](https://github.com/prakhar728/ZecRotor/blob/main/src/scheduler.ts#L8)
-   - If funds are confirmed → move job status from ['PENDING_DEPOSIT'](https://github.com/prakhar728/ZecRotor/blob/main/src/scheduler.ts#L20) to ['PENDING'](https://github.com/prakhar728/ZecRotor/blob/main/src/scheduler.ts#L42).  
-   - Waits until `execute_at_epoch` → processes the job  this [logic](https://github.com/prakhar728/ZecRotor/blob/main/src/scheduler.ts#L59)
-   - Currently produces a **fake transaction** for testing  
+3. **Background scheduler** (runs every minute, [scheduler.ts](https://github.com/prakhar728/ZecRotor/blob/main/src/scheduler.ts#L8)):
+   - Watches deposit address for incoming funds  
+   - If funds confirmed → status changes from [PENDING_DEPOSIT](https://github.com/prakhar728/ZecRotor/blob/main/src/scheduler.ts#L20) to [PENDING](https://github.com/prakhar728/ZecRotor/blob/main/src/scheduler.ts#L42)  
+   - Waits until `execute_at_epoch` → processes the job ([logic](https://github.com/prakhar728/ZecRotor/blob/main/src/scheduler.ts#L59))  
+   - Executes a [full-swap](https://github.com/prakhar728/ZecRotor/blob/main/src/scheduler.ts#L68) and disperses funds to the destination
 
 4. **Job lifecycle tracking**:  
-   - `PENDING_DEPOSIT → FUNDED → PROCESSING → COMPLETED | FAILED`  
-   - Each job includes an **event log** with timestamps and context  
+   - State transitions are logged with timestamps and context
 
 ---
 
-### I wanted to highlight that the entire MVP exists on Mainnet, not testnet. Since it's not audited and still has security issues we can deploy it on the cloud and phala.
-
-
-## ✨ Features (MVP)
-- 🚀 Simple REST API for job creation and tracking  
-- 🕑 Minute-level scheduler (cron-style loop)  
-- 🗂 In-memory job storage (no DB required)  
-- 🎭 Fake transaction execution for testing flows  
-- 📝 Event log per job for transparency  
-- 🧪 Optional deposit simulation endpoint  
-
----
-
-## 📌 Example Usage
+## Example Usage
 
 ### 1. Create a Job
 ```http
@@ -76,8 +84,6 @@ Content-Type: application/json
 }
 ```
 
----
-
 ### 2. Check Job Status
 ```http
 GET /api/jobs/{job_id}
@@ -98,29 +104,14 @@ GET /api/jobs/{job_id}
 
 ---
 
-### 3. (Optional) Simulate a Deposit
-```http
-POST /api/jobs/{job_id}/fake-deposit
-Content-Type: application/json
-
-{
-  "from_address": "0xSENDER",
-  "amount": "123.45",
-  "token": "USDC"
-}
-```
+## Roadmap
+- Add persistent storage (DB)
+- Improve time detection / epoch accuracy
+- Integrate full Zcash shielding/unshielding with NEAR Shade Agents
+- Security audits before production deployment
 
 ---
 
-## 🛣 Roadmap
-- ✅ In-memory job scheduler (fake transactions)  
-- 🚧 Persistent storage (DB support)  
-- 🚧 Real blockchain deposit detection  
-- 🚧 Swap execution (Uniswap/DEX integration)  
-- 🚧 Webhook / notification support  
-- 🚧 Privacy-preserving rotation with Zcash shielding/unshielding  
-
----
-
-## 📖 License
-This project is an **MVP prototype** and intended **for research and experimental use only**.  
+## License
+This project is a prototype intended **for research and experimental use only**.  
+It is unaudited and should not be used with significant funds.
