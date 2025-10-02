@@ -103,20 +103,30 @@ export default function HomePage() {
         transition={{ duration: 0.6 }}
       >
         <div className="mx-auto max-w-3xl space-y-6">
+          {/* Co-brand pill */}
           <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-muted)]/50 px-4 py-2 text-sm">
-            <Shield className="h-4 w-4 text-[var(--color-zcash-gold)]" />
-            <span className="text-[var(--color-foreground)]">
-              Privacy-first cross-chain rotations
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[var(--color-zcash-gold)]" />
+              <span className="text-[var(--color-foreground)] font-medium">Zcash</span>
+            </span>
+            <span className="text-[var(--color-muted-foreground)]">×</span>
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[var(--color-accent-mint)]" />
+              <span className="text-[var(--color-foreground)] font-medium">NEAR Shade Agents</span>
             </span>
           </div>
+
           <h1 className="text-balance text-4xl font-bold tracking-tight text-[var(--color-snow)] sm:text-5xl md:text-6xl">
             Private, scheduled rotations via{" "}
-            <span className="text-[var(--color-zcash-gold)]">Zcash</span>
+            <span className="text-[var(--color-zcash-gold)]">Zcash</span>{" "}
+            with <span className="text-[var(--color-accent-mint)]">NEAR Shade Agents</span>
           </h1>
+
           <p className="text-pretty text-lg text-[var(--color-muted-foreground)] sm:text-xl">
-            Move assets between blockchains through Zcash's shielded pool with scheduled release
-            times. Maximum privacy, minimal friction.
+            Shield in Zcash’s private pool; orchestrate timing and delivery via NEAR Shade Agents.
+            Swap in, shield, schedule, unshield, and deliver — together, on time, on-chain.
           </p>
+
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Button
               size="lg"
@@ -139,8 +149,14 @@ export default function HomePage() {
               Track Status
             </Button>
           </div>
+
+          {/* Optional micro-note under hero */}
+          <p className="text-xs text-[var(--color-muted-foreground)]">
+            Engineered with Zcash privacy primitives and NEAR’s Shade Agents for automated, verifiable execution.
+          </p>
         </div>
       </motion.section>
+
 
       {/* Main Content */}
       <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-2">
