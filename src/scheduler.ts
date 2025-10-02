@@ -23,16 +23,11 @@ export async function processDueJobs() {
 
       const { txns } = await fetchTxnsFromTo(deposit_address, job.sender_address, { per_page: 25 });
 
-      console.log(txns);
-
       for (const tx of txns) {
         const txTimeEpochMinute = nsToEpochMinute(tx.block_timestamp);
 
-        console.log(txTimeEpochMinute < job.created_at_epoch);
-
         // only accept new txns after job was created
         if (txTimeEpochMinute < job.created_at_epoch - 1) continue;
-
 
         const action = tx.actions.find((a: any) => a.action === 'TRANSFER' && a.deposit);
 
@@ -40,8 +35,6 @@ export async function processDueJobs() {
 
         const depositYocto = yoctoFromApi(action.deposit);
         const expectedYocto = NEAR.toUnits(job.amount);
-
-        console.log(depositYocto, expectedYocto);
 
         if (depositYocto === expectedYocto) {
           console.log("Deposit verified for job", job.job_id);

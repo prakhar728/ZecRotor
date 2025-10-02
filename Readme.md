@@ -20,7 +20,7 @@ This MVP is the first step toward a system that can:
    - `destination_address` → the final recipient  
    - `destination_token` → the token to send out  
    - `execute_at_epoch` → when the transaction should execute  
-
+    - Refer to [job.ts](src/routes/jobs.ts) to understand how it work.
 2. **Agent generates a deposit address** and stores the job in memory.  
 
 3. **Background scheduler** (runs every minute):  
@@ -34,6 +34,9 @@ This MVP is the first step toward a system that can:
    - Each job includes an **event log** with timestamps and context  
 
 ---
+
+### I wanted to highlight that the entire MVP exists on Mainnet, not testnet. Since it's not audited and still has security issues we can deploy it on the cloud and phala.
+
 
 ## ✨ Features (MVP)
 - 🚀 Simple REST API for job creation and tracking  
