@@ -20,13 +20,15 @@ This MVP is the first step toward a system that can:
    - `destination_address` → the final recipient  
    - `destination_token` → the token to send out  
    - `execute_at_epoch` → when the transaction should execute  
-    - Refer to [job.ts](src/routes/jobs.ts) to understand how it work.
+    - Refer to [job.ts](https://github.com/prakhar728/ZecRotor/blob/main/src/routes/jobs.ts#L58) to understand how it works.
+
 2. **Agent generates a deposit address** and stores the job in memory.  
+ - The memory is a simple [JS - TS array](https://github.com/prakhar728/ZecRotor/blob/main/src/state.ts#L29). 
 
 3. **Background scheduler** (runs every minute):  
-   - Watches the deposit address for incoming funds  
-   - If funds are confirmed → marks job as **FUNDED**  
-   - Waits until `execute_at_epoch` → processes the job  
+   - Watches the deposit address for incoming funds   -  [Method definition schedular.ts](https://github.com/prakhar728/ZecRotor/blob/main/src/scheduler.ts#L8)
+   - If funds are confirmed → move job status from ['PENDING_DEPOSIT'](https://github.com/prakhar728/ZecRotor/blob/main/src/scheduler.ts#L20) to ['PENDING'](https://github.com/prakhar728/ZecRotor/blob/main/src/scheduler.ts#L42).  
+   - Waits until `execute_at_epoch` → processes the job  this [logic](https://github.com/prakhar728/ZecRotor/blob/main/src/scheduler.ts#L59)
    - Currently produces a **fake transaction** for testing  
 
 4. **Job lifecycle tracking**:  

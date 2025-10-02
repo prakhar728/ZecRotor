@@ -65,13 +65,6 @@ export async function processDueJobs() {
 
     try {
       await new Promise((r) => setTimeout(r, 50));
-      const fakeTx = {
-        tx_id: `fake_${job.job_id.slice(0, 8)}_${ts}`,
-        sent_at_epoch: ts,
-        to: job.destination_address,
-        token: job.destination_token,
-      };
-
       const { finalStatus } = await fullSwap(MAIN_NEAR_ACOUNT, MAIN_NEAR_PRIVATE_KEY, job.destination_address, "", "", NEAR.toUnits(job.amount).toString());
 
       job.events.push({ ts_epoch: ts, type: 'TX_SUBMITTED', payload: finalStatus as any });
